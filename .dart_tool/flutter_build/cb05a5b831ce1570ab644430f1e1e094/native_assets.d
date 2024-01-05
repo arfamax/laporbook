@@ -1,0 +1,1 @@
+ /home/arfamax/Documents/belajar\ flutter/laporbook2/.dart_tool/flutter_build/cb05a5b831ce1570ab644430f1e1e094/native_assets.yaml: 
