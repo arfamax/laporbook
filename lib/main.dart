@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:laporbook/firebase_options.dart';
+import 'package:laporbook/models/laporan.dart';
+import 'package:laporbook/models/like_model.dart';
 import 'package:laporbook/pages/AddForm.dart';
 import 'package:laporbook/pages/DetailPage.dart';
 import 'package:laporbook/pages/LoginPage.dart';
@@ -19,6 +21,13 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  Like like = Like(
+    uid: '',
+    docId: '',
+    nama: '',
+    jumlahlike: '',
+  );
+
   runApp(MaterialApp(
     title: 'Lapor Book',
     initialRoute: '/',
@@ -28,7 +37,7 @@ Future<void> main() async {
       '/register': (context) => const RegisterPage(),
       '/dashboard': (context) => const DashboardPage(),
       '/add': (context) => AddFormPage(),
-      '/detail': (context) => DetailPage(),
+      '/detail': (context) => DetailPage(like: like),
     },
   ));
 }

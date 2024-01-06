@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:laporbook/components/status_dialog.dart';
 // import 'package:laporbook/components/komen_dialog.dart';
@@ -6,17 +9,23 @@ import 'package:laporbook/components/styles.dart';
 import 'package:laporbook/models/akun.dart';
 import 'package:laporbook/models/laporan.dart';
 import 'package:intl/intl.dart';
+import 'package:laporbook/models/like_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DetailPage extends StatefulWidget {
-  DetailPage({super.key});
+  final Like like;
+  const DetailPage({super.key, required this.like});
+
   @override
   State<StatefulWidget> createState() => _DetailPageState();
 }
 
 class _DetailPageState extends State<DetailPage> {
-  final bool _isLoading = false;
-
+  bool _isLoading = false;
+  bool _isLiked = false;
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
   String? status;
 
   Future launch(String uri) async {
@@ -35,6 +44,68 @@ class _DetailPageState extends State<DetailPage> {
         );
       },
     );
+  }
+
+  void likeButton(Akun akun) async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      CollectionReference likeCollection = _firestore.collection('like');
+      final arguments =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+      Laporan laporan = arguments['laporan'];
+      // final int _totalLike =
+      //     await _firestore.collection('like').snapshots().length;
+
+      // Convert DateTime to Firestore Timestamp
+      Timestamp timestamp = Timestamp.fromDate(DateTime.now());
+      final id = likeCollection.doc().id;
+
+      await likeCollection.doc(id).set({
+        'uid': _auth.currentUser!.uid,
+        'docId': laporan.docId,
+        'nama': widget.like.nama,
+        'jumlahlike': '',
+      }).catchError((e) {
+        throw e;
+      });
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<String> getLike() async {
+    CollectionReference likeCollection = _firestore.collection('like');
+    AggregateQuerySnapshot totalLike = await likeCollection.count().get();
+
+    return await totalLike.toString(); // output: Data from DB
+  }
+
+  Future<bool> isLiked() async {
+    CollectionReference likeCollection = _firestore.collection('like');
+    final id = likeCollection.doc().id;
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    Laporan laporan = arguments['laporan'];
+    Like like = arguments['like'];
+
+    if (_auth.currentUser?.uid == like.uid) {
+      if (laporan.uid == like.docId) {
+        return _isLiked = true;
+      } else {
+        return _isLiked = false;
+      }
+    } else {
+      return _isLiked = false;
+    }
   }
 
   @override
@@ -100,10 +171,8 @@ class _DetailPageState extends State<DetailPage> {
                       ),
                       ListTile(
                         leading: const Icon(Icons.date_range),
-                        title: const Center(child: Text('Tanggal Laporan')),
-                        subtitle: Center(
-                            child: Text(DateFormat('dd MMMM yyyy')
-                                .format(laporan.tanggal))),
+                        title: const Center(child: Text('Jumlah Like')),
+                        subtitle: Center(child: Text(getLike().toString())),
                         trailing: IconButton(
                           icon: const Icon(Icons.location_on),
                           onPressed: () {
@@ -142,6 +211,22 @@ class _DetailPageState extends State<DetailPage> {
                             child: const Text('Ubah Status'),
                           ),
                         ),
+                      Container(
+                        width: 250,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            likeButton(akun);
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text('Like'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
